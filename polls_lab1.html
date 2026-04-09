@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Система опитування групи</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans, sans-serif);
+    font-size: 15px;
+    color: var(--color-text-primary);
+    background: var(--color-background-tertiary);
+    padding: 24px 16px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 500;
+    text-align: center;
+    margin-bottom: 24px;
+    color: var(--color-text-primary);
+  }
+
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .form-card {
+    flex: 0 0 340px;
+    min-width: 280px;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+  }
+
+  .form-card h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: var(--color-text-primary);
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+  }
+
+  label span.req {
+    color: var(--color-text-danger);
+    margin-left: 2px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--color-border-primary);
+    box-shadow: 0 0 0 2px rgba(100, 120, 255, 0.12);
+  }
+
+  input.invalid, select.invalid, textarea.invalid {
+    border-color: var(--color-border-danger);
+    background: var(--color-background-danger);
+  }
+
+  textarea { resize: vertical; min-height: 72px; }
+
+  .error-msg {
+    display: none;
+    font-size: 12px;
+    color: var(--color-text-danger);
+    margin-top: 3px;
+  }
+
+  .error-msg.visible { display: block; }
+
+  button[type="submit"] {
+    width: 100%;
+    padding: 9px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s;
+  }
+
+  button[type="submit"]:hover { background: var(--color-background-secondary); }
+  button[type="submit"]:active { transform: scale(0.98); }
+
+  .success-banner {
+    display: none;
+    margin-top: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--color-text-success);
+    background: var(--color-background-success);
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-success);
+  }
+
+  .success-banner.visible { display: block; }
+
+  .list-section {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .list-section h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    color: var(--color-text-primary);
+  }
+
+  .empty-state {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    padding: 24px 0;
+    text-align: center;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    background: var(--color-background-primary);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
+  }
+
+  thead tr {
+    border-bottom: 0.5px solid var(--color-border-secondary);
+  }
+
+  th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 9px 12px;
+    vertical-align: top;
+    word-break: break-word;
+    color: var(--color-text-primary);
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--color-background-secondary); }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+
+  .badge-public {
+    background: #EAF3DE;
+    color: #3B6D11;
+  }
+
+  .badge-private {
+    background: #FAECE7;
+    color: #993C1D;
+  }
+
+  .badge-restricted {
+    background: #FAEEDA;
+    color: #854F0B;
+  }
+
+  .btn-delete {
+    padding: 3px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    background: none;
+    border: 0.5px solid var(--color-border-danger);
+    color: var(--color-text-danger);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-delete:hover { background: var(--color-background-danger); }
+</style>
+</head>
+<body>
+
+<h1>Система «Опитування групи»</h1>
+
+<div class="layout">
+  <div class="form-card">
+    <h2>Нове опитування</h2>
+    <form id="poll-form" novalidate>
+
+      <div class="field">
+        <label for="title">Назва<span class="req">*</span></label>
+        <input type="text" id="title" placeholder="Введіть назву опитування">
+        <div class="error-msg" id="err-title">Назва є обов'язковою (мін. 3 символи)</div>
+      </div>
+
+      <div class="field">
+        <label for="endDate">Дата завершення<span class="req">*</span></label>
+        <input type="date" id="endDate">
+        <div class="error-msg" id="err-endDate">Вкажіть дату не раніше сьогодні</div>
+      </div>
+
+      <div class="field">
+        <label for="visibility">Видимість<span class="req">*</span></label>
+        <select id="visibility">
+          <option value="">— оберіть —</option>
+          <option value="public">Публічне</option>
+          <option value="private">Приватне</option>
+          <option value="restricted">Обмежене</option>
+        </select>
+        <div class="error-msg" id="err-visibility">Оберіть рівень видимості</div>
+      </div>
+
+      <div class="field">
+        <label for="author">Автор<span class="req">*</span></label>
+        <input type="text" id="author" placeholder="Ім'я автора">
+        <div class="error-msg" id="err-author">Вкажіть автора (мін. 2 символи)</div>
+      </div>
+
+      <div class="field">
+        <label for="description">Опис</label>
+        <textarea id="description" placeholder="Необов'язковий опис опитування…"></textarea>
+      </div>
+
+      <button type="submit">Додати опитування</button>
+      <div class="success-banner" id="success-banner">Опитування успішно додано!</div>
+    </form>
+  </div>
+
+  <div class="list-section">
+    <h2 id="list-heading">Список опитувань</h2>
+    <div id="polls-container"></div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    polls: [],
+    nextId: 1
+  };
+
+  const today = () => new Date().toISOString().split('T')[0];
+
+  function readForm() {
+    return {
+      title: document.getElementById('title').value.trim(),
+      endDate: document.getElementById('endDate').value,
+      visibility: document.getElementById('visibility').value,
+      author: document.getElementById('author').value.trim(),
+      description: document.getElementById('description').value.trim()
+    };
+  }
+
+  function validate(data) {
+    const errors = {};
+    if (!data.title || data.title.length < 3) errors.title = true;
+    if (!data.endDate || data.endDate < today()) errors.endDate = true;
+    if (!data.visibility) errors.visibility = true;
+    if (!data.author || data.author.length < 2) errors.author = true;
+    return errors;
+  }
+
+  function showErrors(errors) {
+    const fields = ['title', 'endDate', 'visibility', 'author'];
+    fields.forEach(f => {
+      const el = document.getElementById(f);
+      const errEl = document.getElementById('err-' + f);
+      if (errors[f]) {
+        el.classList.add('invalid');
+        errEl.classList.add('visible');
+      } else {
+        el.classList.remove('invalid');
+        errEl.classList.remove('visible');
+      }
+    });
+  }
+
+  function clearErrors() {
+    ['title', 'endDate', 'visibility', 'author'].forEach(f => {
+      document.getElementById(f).classList.remove('invalid');
+      document.getElementById('err-' + f).classList.remove('visible');
+    });
+  }
+
+  function clearForm() {
+    document.getElementById('poll-form').reset();
+    clearErrors();
+  }
+
+  function addItem(data) {
+    state.polls.unshift({ id: state.nextId++, ...data });
+  }
+
+  function deleteItem(id) {
+    state.polls = state.polls.filter(p => p.id !== id);
+    render();
+  }
+
+  const visLabel = { public: 'Публічне', private: 'Приватне', restricted: 'Обмежене' };
+  const visBadge = { public: 'badge-public', private: 'badge-private', restricted: 'badge-restricted' };
+
+  function formatDate(d) {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    return `${day}.${m}.${y}`;
+  }
+
+  function render() {
+    const container = document.getElementById('polls-container');
+    const heading = document.getElementById('list-heading');
+    heading.textContent = `Список опитувань (${state.polls.length})`;
+
+    if (state.polls.length === 0) {
+      container.innerHTML = '<div class="empty-state">Поки що немає жодного опитування</div>';
+      return;
+    }
+
+    const rows = state.polls.map(p => `
+      <tr>
+        <td style="width:32px;color:var(--color-text-secondary);font-size:11px;">${p.id}</td>
+        <td style="width:160px;font-weight:500;">${escHtml(p.title)}</td>
+        <td style="width:90px;">${formatDate(p.endDate)}</td>
+        <td style="width:100px;"><span class="badge ${visBadge[p.visibility]}">${visLabel[p.visibility]}</span></td>
+        <td style="width:100px;">${escHtml(p.author)}</td>
+        <td style="width:120px;color:var(--color-text-secondary);font-size:12px;">${escHtml(p.description) || '—'}</td>
+        <td style="width:72px;text-align:center;">
+          <button class="btn-delete" type="button" onclick="deleteItem(${p.id})">Видалити</button>
+        </td>
+      </tr>
+    `).join('');
+
+    container.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Назва</th>
+              <th>Кінець</th>
+              <th>Видимість</th>
+              <th>Автор</th>
+              <th>Опис</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  document.getElementById('poll-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const data = readForm();
+    const errors = validate(data);
+    showErrors(errors);
+
+    if (Object.keys(errors).length > 0) return;
+
+    addItem(data);
+    render();
+    clearForm();
+
+    const banner = document.getElementById('success-banner');
+    banner.classList.add('visible');
+    setTimeout(() => banner.classList.remove('visible'), 2500);
+  });
+
+  ['title','endDate','visibility','author'].forEach(f => {
+    document.getElementById(f).addEventListener('input', function() {
+      this.classList.remove('invalid');
+      document.getElementById('err-' + f).classList.remove('visible');
+    });
+  });
+
+  render();
+</script>
+</body>
+</html>
