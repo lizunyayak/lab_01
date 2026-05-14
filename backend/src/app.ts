@@ -10,6 +10,7 @@ import userRoutes from './routes/user.routes.js';
 import pollRoutes from './routes/poll.routes.js';
 import questionRoutes from './routes/question.routes.js';
 import responseRoutes from './routes/response.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
 
 const app = express();
 
@@ -24,10 +25,11 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
-app.use('/api/users',     userRoutes);
-app.use('/api/polls',     pollRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/responses', responseRoutes);
+app.use('/api/users',      userRoutes);
+app.use('/api/polls',      pollRoutes);
+app.use('/api/questions',  questionRoutes);
+app.use('/api/responses',  responseRoutes);
+app.use('/api/analytics',  analyticsRoutes);
 
 // ─── 404 + Error handler (MUST be last) ─────────────────────────────────────
 app.use(notFoundHandler);

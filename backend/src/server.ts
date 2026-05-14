@@ -1,4 +1,7 @@
+import { runMigrations } from './db/database.js';
 import app from './app.js';
+
+runMigrations();
 
 const PORT = process.env['PORT'] ? parseInt(process.env['PORT']) : 3000;
 
