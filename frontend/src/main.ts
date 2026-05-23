@@ -48,6 +48,10 @@ function userName(authorId: string): string {
   return users.find(u => u.id === authorId)?.name ?? authorId.slice(0, 8) + '…';
 }
 
+function userEmail(authorId: string): string {
+  return users.find(u => u.id === authorId)?.email ?? '—';
+}
+
 // ── Render list ───────────────────────────────────────────────────────────────
 function renderPolls(): void {
   countBadge.textContent = String(polls.length);
@@ -72,6 +76,7 @@ function renderPolls(): void {
       <td class="cell-date">${fmtDate(p.createdAt.slice(0, 10))}</td>
       <td><span class="badge ${esc(visBadge[p.visibility] ?? '')}">${esc(visLabel[p.visibility] ?? p.visibility)}</span></td>
       <td>${esc(userName(p.authorId))}</td>
+      <td class="cell-email">${esc(userEmail(p.authorId))}</td>
       <td class="cell-desc">${esc(p.description) || '—'}</td>
       <td style="text-align:center; white-space:nowrap;">
         <button class="btn-edit" type="button"
@@ -103,6 +108,7 @@ function renderPolls(): void {
           <th>Створено</th>
           <th>Видимість</th>
           <th>Автор</th>
+          <th>Email</th>
           <th>Опис</th>
           <th></th>
         </tr></thead>
@@ -257,7 +263,7 @@ async function handleSubmit(): Promise<void> {
   const endDate     = endDateInput.value;
   const visibility  = visSelect.value as Visibility;
   const authorName  = authorInput.value.trim();
-  const email       = emailInput.value.trim();
+  const email       = emailInput.value.trim().toLowerCase();
   const description = descTextarea.value.trim();
 
   // ── Client-side validation ────────────────────────────────────────────────

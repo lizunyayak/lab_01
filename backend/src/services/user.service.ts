@@ -50,13 +50,14 @@ export class UserService {
     const errs = validateCreate(dto);
     if (errs.length) throw validationError(errs);
 
-    const existing = userRepository.findByEmail(dto.email);
-    if (existing) throw conflictError(`User with email "${dto.email}" already exists`);
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const existing = userRepository.findByEmail(normalizedEmail);
+    if (existing) throw conflictError(`User with email "${normalizedEmail}" already exists`);
 
     const user = userRepository.save({
       id: userRepository.generateId(),
       name: dto.name.trim(),
-      email: dto.email.trim().toLowerCase(),
+      email: normalizedEmail,
       createdAt: userRepository.now()
     });
     return toDto(user);

@@ -15,7 +15,7 @@ export class UserRepository extends BaseRepository {
 
   findByEmail(email: string): User | undefined {
     return getDb()
-      .prepare(`SELECT * FROM users WHERE email = '${esc(email)}'`)
+      .prepare(`SELECT * FROM users WHERE LOWER(email) = LOWER('${esc(email)}')`)
       .get() as User | undefined;
   }
 

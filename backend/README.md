@@ -163,27 +163,31 @@ Legacy-префікс `/api` (без версії) також підтримує
 
 ## Приклади запитів (curl)
 
-### 1. Створити користувача
+> Перед виконанням прикладів запустіть seed: `npm run seed`  
+> Seed додає користувачів `u1`–`u5` та опитування `p1`–`p3`.
+
+### 1. Створити нового користувача
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/users \
   -H "Content-Type: application/json" \
-  -d '{"name":"Іван Петренко","email":"ivan@example.com"}'
-# → 201 { "id": "...", "name": "Іван Петренко", ... }
+  -d '{"name":"Новий Студент","email":"student@example.com"}'
+# → 201 { "id": "...", "name": "Новий Студент", "email": "student@example.com", "createdAt": "..." }
 ```
 
 ### 2. Список опитувань з фільтром + сортуванням + пагінацією (WHERE + ORDER + LIMIT)
 
 ```bash
 curl "http://localhost:3000/api/v1/polls?visibility=public&sortBy=endDate&sortDir=asc&page=1&pageSize=5"
+# → { "items": [...], "total": 2, "page": 1, "pageSize": 5 }
 ```
 
 ### 3. Аналітика — JOIN (опитування + автор + питання з лічильниками)
 
 ```bash
 curl http://localhost:3000/api/v1/analytics/polls/p1/details
-# → { "id": "p1", "title": "...", "authorName": "Олена Коваленко",
-#     "questions": [{ "text": "...", "responseCount": 3 }, ...] }
+# → { "id": "p1", "title": "Задоволеність навчанням", "authorName": "Олена Коваленко",
+#     "questions": [{ "text": "Чи задоволені ви якістю лекцій?", "responseCount": 3 }, ...] }
 ```
 
 ### 4. Агрегація — статистика опитування (COUNT / AVG)
@@ -197,16 +201,16 @@ curl http://localhost:3000/api/v1/analytics/polls/p1/stats
 ### 5. Повне оновлення опитування (PUT)
 
 ```bash
-curl -X PUT http://localhost:3000/api/v1/polls/POLL_ID \
+curl -X PUT http://localhost:3000/api/v1/polls/p2 \
   -H "Content-Type: application/json" \
-  -d '{"title":"Нова назва","endDate":"2026-12-31","visibility":"public","authorId":"USER_ID","description":""}'
-# → 200 { "id": "...", "title": "Нова назва", ... }
+  -d '{"title":"Якість лаб (оновлено)","endDate":"2026-12-31","visibility":"public","authorId":"u1","description":"Оновлений опис"}'
+# → 200 { "id": "p2", "title": "Якість лаб (оновлено)", ... }
 ```
 
 ### 6. Видалення опитування (каскад)
 
 ```bash
-curl -X DELETE http://localhost:3000/api/v1/polls/p1
+curl -X DELETE http://localhost:3000/api/v1/polls/p3
 # → 204 No Content (видаляє questions і responses автоматично через ON DELETE CASCADE)
 ```
 
@@ -214,7 +218,7 @@ curl -X DELETE http://localhost:3000/api/v1/polls/p1
 
 ## ⚠ SQLi-демонстрація (навчальна)
 
-Endpoint `GET /api/analytics/polls/search?q=` використовує рядкову конкатенацію для формування SQL:
+Endpoint `GET /api/v1/analytics/polls/search?q=` використовує рядкову конкатенацію для формування SQL:
 
 ```typescript
 const sql = `SELECT ... FROM polls WHERE title LIKE '%${q}%' ...`;
@@ -224,7 +228,7 @@ const sql = `SELECT ... FROM polls WHERE title LIKE '%${q}%' ...`;
 Зловмисник може передати керуючі символи SQL у параметрі `q`. Наприклад:
 
 ```
-GET /api/analytics/polls/search?q=' OR '1'='1
+GET /api/v1/analytics/polls/search?q=' OR '1'='1
 ```
 
 Сформований SQL:
