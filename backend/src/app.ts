@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 
 import { requestLogger } from './middlewares/logger.middleware.js';
@@ -14,6 +15,13 @@ import analyticsRoutes from './routes/analytics.routes.js';
 
 const app = express();
 
+// ─── CORS ────────────────────────────────────────────────────────────────────
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
+
 // ─── Global middleware ───────────────────────────────────────────────────────
 app.use(express.json());
 app.use(requestLogger);
@@ -24,7 +32,14 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   swaggerOptions: { persistAuthorization: true }
 }));
 
-// ─── Routes ─────────────────────────────────────────────────────────────────
+// ─── Versioned routes /api/v1/ ───────────────────────────────────────────────
+app.use('/api/v1/users',      userRoutes);
+app.use('/api/v1/polls',      pollRoutes);
+app.use('/api/v1/questions',  questionRoutes);
+app.use('/api/v1/responses',  responseRoutes);
+app.use('/api/v1/analytics',  analyticsRoutes);
+
+// ─── Legacy routes /api/ (backward compat) ──────────────────────────────────
 app.use('/api/users',      userRoutes);
 app.use('/api/polls',      pollRoutes);
 app.use('/api/questions',  questionRoutes);

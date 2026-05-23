@@ -86,14 +86,30 @@ export class PollService {
   replace(id: string, dto: CreatePollRequestDto): PollResponseDto {
     const poll = pollRepository.findById(id);
     if (!poll) throw notFound('Poll', id);
-    const errs = validateCreate(dto);
+
+    // For PUT we validate like create but skip the "endDate in future" check
+    // so already-existing polls with past dates can still be edited.
+    const errs: string[] = [];
+    if (!dto.title || dto.title.trim().length < 3)
+      errs.push('title: мінімум 3 символи');
+    if (!dto.endDate || !ISO_DATE_RE.test(dto.endDate))
+      errs.push('endDate: формат YYYY-MM-DD');
+    if (!dto.visibility || !VISIBILITIES.includes(dto.visibility))
+      errs.push(`visibility: одне з ${VISIBILITIES.join(', ')}`);
+    if (!dto.authorId)
+      errs.push('authorId: обов\'язкове поле');
     if (errs.length) throw validationError(errs);
+
+    if (!userRepository.findById(dto.authorId))
+      throw validationError([`authorId: user "${dto.authorId}" не знайдено`]);
+
     return toDto(pollRepository.save({
       ...poll,
       title: dto.title.trim(),
       description: dto.description?.trim() ?? '',
       endDate: dto.endDate,
-      visibility: dto.visibility
+      visibility: dto.visibility,
+      authorId: dto.authorId
     }));
   }
 

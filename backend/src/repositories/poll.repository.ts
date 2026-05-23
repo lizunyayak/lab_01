@@ -36,7 +36,8 @@ export class PollRepository extends BaseRepository {
         title       = '${esc(poll.title)}',
         description = '${esc(poll.description)}',
         endDate     = '${esc(poll.endDate)}',
-        visibility  = '${esc(poll.visibility)}'
+        visibility  = '${esc(poll.visibility)}',
+        authorId    = '${esc(poll.authorId)}'
     `);
     return poll;
   }
