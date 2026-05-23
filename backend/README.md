@@ -116,42 +116,48 @@ migrations/
 
 ## API-маршрути
 
-Усі маршрути мають префікс `/api`.
+Основний префікс: **`/api/v1`**  
+Legacy-префікс `/api` (без версії) також підтримується для зворотної сумісності.
+
+### CORS
+
+Дозволений origin: `http://localhost:5173` (Vite dev server фронтенду).  
+Методи: `GET, POST, PUT, PATCH, DELETE, OPTIONS`.
 
 ### CRUD маршрути
 
 | Метод | URL | Опис |
 |-------|-----|------|
-| GET | `/api/users` | список користувачів |
-| POST | `/api/users` | створити |
-| GET | `/api/users/:id` | отримати за id |
-| PUT | `/api/users/:id` | повне оновлення |
-| PATCH | `/api/users/:id` | часткове оновлення |
-| DELETE | `/api/users/:id` | видалити |
-| GET | `/api/polls` | список опитувань (`?visibility=`, `?authorId=`, `?sortBy=`, `?sortDir=`) |
-| POST | `/api/polls` | створити |
-| GET | `/api/polls/:id` | отримати за id |
-| PUT | `/api/polls/:id` | повне оновлення |
-| PATCH | `/api/polls/:id` | часткове оновлення |
-| DELETE | `/api/polls/:id` | видалити (каскад: questions + responses) |
-| GET | `/api/questions` | список питань (`?pollId=`) |
-| POST | `/api/questions` | додати питання |
-| GET | `/api/questions/:id` | питання за id |
-| PATCH | `/api/questions/:id` | оновити |
-| DELETE | `/api/questions/:id` | видалити |
-| GET | `/api/responses` | список відповідей (`?pollId=`, `?userId=`, `?questionId=`) |
-| POST | `/api/responses` | відправити відповідь |
-| GET | `/api/responses/:id` | відповідь за id |
-| PATCH | `/api/responses/:id` | оновити |
-| DELETE | `/api/responses/:id` | видалити |
+| GET | `/api/v1/users` | список користувачів |
+| POST | `/api/v1/users` | створити |
+| GET | `/api/v1/users/:id` | отримати за id |
+| PUT | `/api/v1/users/:id` | повне оновлення |
+| PATCH | `/api/v1/users/:id` | часткове оновлення |
+| DELETE | `/api/v1/users/:id` | видалити |
+| GET | `/api/v1/polls` | список опитувань (`?visibility=`, `?authorId=`, `?sortBy=`, `?sortDir=`, `?page=`, `?pageSize=`) |
+| POST | `/api/v1/polls` | створити |
+| GET | `/api/v1/polls/:id` | отримати за id |
+| PUT | `/api/v1/polls/:id` | повне оновлення (title, endDate, visibility, authorId, description) |
+| PATCH | `/api/v1/polls/:id` | часткове оновлення |
+| DELETE | `/api/v1/polls/:id` | видалити (каскад: questions + responses) |
+| GET | `/api/v1/questions` | список питань (`?pollId=`) |
+| POST | `/api/v1/questions` | додати питання |
+| GET | `/api/v1/questions/:id` | питання за id |
+| PATCH | `/api/v1/questions/:id` | оновити |
+| DELETE | `/api/v1/questions/:id` | видалити |
+| GET | `/api/v1/responses` | список відповідей (`?pollId=`, `?userId=`, `?questionId=`) |
+| POST | `/api/v1/responses` | відправити відповідь |
+| GET | `/api/v1/responses/:id` | відповідь за id |
+| PATCH | `/api/v1/responses/:id` | оновити |
+| DELETE | `/api/v1/responses/:id` | видалити |
 
 ### Аналітичні маршрути
 
 | Метод | URL | Опис |
 |-------|-----|------|
-| GET | `/api/analytics/polls/:id/details` | JOIN: опитування + автор + питання з кількістю відповідей |
-| GET | `/api/analytics/polls/:id/stats` | агрегація: COUNT / AVG / DISTINCT учасників |
-| GET | `/api/analytics/polls/search?q=` | ⚠ SQLi-демо: пошук за назвою |
+| GET | `/api/v1/analytics/polls/:id/details` | JOIN: опитування + автор + питання з кількістю відповідей |
+| GET | `/api/v1/analytics/polls/:id/stats` | агрегація: COUNT / AVG / DISTINCT учасників |
+| GET | `/api/v1/analytics/polls/search?q=` | ⚠ SQLi-демо: пошук за назвою |
 
 ---
 
@@ -160,7 +166,7 @@ migrations/
 ### 1. Створити користувача
 
 ```bash
-curl -X POST http://localhost:3000/api/users \
+curl -X POST http://localhost:3000/api/v1/users \
   -H "Content-Type: application/json" \
   -d '{"name":"Іван Петренко","email":"ivan@example.com"}'
 # → 201 { "id": "...", "name": "Іван Петренко", ... }
@@ -169,13 +175,13 @@ curl -X POST http://localhost:3000/api/users \
 ### 2. Список опитувань з фільтром + сортуванням + пагінацією (WHERE + ORDER + LIMIT)
 
 ```bash
-curl "http://localhost:3000/api/polls?visibility=public&sortBy=endDate&sortDir=asc&page=1&pageSize=5"
+curl "http://localhost:3000/api/v1/polls?visibility=public&sortBy=endDate&sortDir=asc&page=1&pageSize=5"
 ```
 
 ### 3. Аналітика — JOIN (опитування + автор + питання з лічильниками)
 
 ```bash
-curl http://localhost:3000/api/analytics/polls/p1/details
+curl http://localhost:3000/api/v1/analytics/polls/p1/details
 # → { "id": "p1", "title": "...", "authorName": "Олена Коваленко",
 #     "questions": [{ "text": "...", "responseCount": 3 }, ...] }
 ```
@@ -183,15 +189,24 @@ curl http://localhost:3000/api/analytics/polls/p1/details
 ### 4. Агрегація — статистика опитування (COUNT / AVG)
 
 ```bash
-curl http://localhost:3000/api/analytics/polls/p1/stats
+curl http://localhost:3000/api/v1/analytics/polls/p1/stats
 # → { "pollId": "p1", "totalResponses": 6, "totalQuestions": 3,
 #     "avgResponsesPerQuestion": 2.0, "uniqueParticipants": 3 }
 ```
 
-### 5. Видалення опитування (каскад)
+### 5. Повне оновлення опитування (PUT)
 
 ```bash
-curl -X DELETE http://localhost:3000/api/polls/p1
+curl -X PUT http://localhost:3000/api/v1/polls/POLL_ID \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Нова назва","endDate":"2026-12-31","visibility":"public","authorId":"USER_ID","description":""}'
+# → 200 { "id": "...", "title": "Нова назва", ... }
+```
+
+### 6. Видалення опитування (каскад)
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/polls/p1
 # → 204 No Content (видаляє questions і responses автоматично через ON DELETE CASCADE)
 ```
 
