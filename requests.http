@@ -1,0 +1,194 @@
+### ============================================================
+### Security Regression Tests — Lab 05
+### ============================================================
+### How to run: VS Code REST Client or IntelliJ HTTP client.
+### Requires: backend running at http://localhost:3000
+###            seed data applied (npm run seed in /backend)
+###
+### Seed user IDs: u1 u2 u3 u4 u5
+### Seed poll IDs: p1 p2 p3
+### ============================================================
+
+@base = http://localhost:3000/api/v1
+
+
+### ============================================================
+### СЦЕНАРІЙ А — SQL INJECTION
+### ============================================================
+
+### [A-1] БУЛО (вразливо): OR-injection через /polls/search
+### Очікуваний результат ДО виправлення: повертає ВСІ опитування
+### Зараз /search навмисно залишений вразливим для демонстрації
+GET {{base}}/analytics/polls/search?q=' OR '1'='1
+Accept: application/json
+
+###
+
+### [A-2] БУЛО (вразливо): UNION-атака — витягує таблицю users
+### Очікуваний результат ДО виправлення: email-адреси користувачів у відповіді
+GET {{base}}/analytics/polls/search?q=' UNION SELECT id,email,name,email,createdAt FROM users--
+Accept: application/json
+
+###
+
+### [A-3] ВИПРАВЛЕННЯ: той самий OR-injection через /polls/search-safe
+### Очікуваний результат ПІСЛЯ виправлення: {"data":[],"meta":{"count":0,...}}
+### Шкідливий рядок трактується як буквальний текст, а не SQL-код
+GET {{base}}/analytics/polls/search-safe?q=' OR '1'='1
+Accept: application/json
+
+###
+
+### [A-4] ВИПРАВЛЕННЯ: UNION через /search-safe
+### Очікуваний результат: {"data":[],"meta":{"count":0,...}}
+GET {{base}}/analytics/polls/search-safe?q=' UNION SELECT id,email,name,email,createdAt FROM users--
+Accept: application/json
+
+###
+
+### [A-5] РЕГРЕСІЯ: легітимний пошук після виправлення працює
+### Очікуваний результат: {"data":[...опитування зі словом "навч"...],"meta":{...}}
+GET {{base}}/analytics/polls/search-safe?q=навч
+Accept: application/json
+
+###
+
+### [A-6] РЕГРЕСІЯ: порожній пошук повертає всі опитування (LIMIT 20)
+GET {{base}}/analytics/polls/search-safe?q=
+Accept: application/json
+
+
+### ============================================================
+### СЦЕНАРІЙ В — IDOR (Broken Access Control)
+### ============================================================
+
+### [B-1] Підготовка: Аліса (u1) створює приватну нотатку
+### Зберегти NOTE_ID з відповіді для наступних запитів
+# @name createNote
+POST {{base}}/notes
+X-Demo-UserId: u1
+Content-Type: application/json
+
+{
+  "title": "Секретна нотатка Аліси",
+  "content": "Це конфіденційна інформація"
+}
+
+###
+
+### [B-2] БУЛО (вразливо): Боб (u2) читає нотатку Аліси через /unsafe
+### Очікуваний результат БУЛО: 200 з даними нотатки Аліси (витік!)
+### Підставте NOTE_ID з відповіді [B-1]:
+GET {{base}}/notes/{{createNote.response.body.id}}/unsafe
+X-Demo-UserId: u2
+Accept: application/json
+
+###
+
+### [B-3] ВИПРАВЛЕННЯ: Боб (u2) намагається читати через захищений endpoint
+### Очікуваний результат ПІСЛЯ: 404 Not Found
+GET {{base}}/notes/{{createNote.response.body.id}}
+X-Demo-UserId: u2
+Accept: application/json
+
+###
+
+### [B-4] РЕГРЕСІЯ: Аліса (u1) читає свою власну нотатку — успішно
+### Очікуваний результат: 200 з даними нотатки
+GET {{base}}/notes/{{createNote.response.body.id}}
+X-Demo-UserId: u1
+Accept: application/json
+
+###
+
+### [B-5] РЕГРЕСІЯ: Аліса отримує список лише своїх нотаток
+### Очікуваний результат: {"items":[{"ownerUserId":"u1",...}]}
+GET {{base}}/notes
+X-Demo-UserId: u1
+Accept: application/json
+
+###
+
+### [B-6] demoAuth: відсутній заголовок → 401
+### Очікуваний результат: 401 {"error":{"code":"UNAUTHORIZED",...}}
+GET {{base}}/notes
+Accept: application/json
+
+###
+
+### [B-7] demoAuth: невідомий userId → 401
+### Очікуваний результат: 401 {"error":{"code":"UNAUTHORIZED",...}}
+GET {{base}}/notes
+X-Demo-UserId: nonexistent-user-id
+Accept: application/json
+
+###
+
+### [B-8] IDOR DELETE: Боб намагається видалити нотатку Аліси → 404
+DELETE {{base}}/notes/{{createNote.response.body.id}}
+X-Demo-UserId: u2
+
+###
+
+### [B-9] Аліса видаляє власну нотатку → 204
+DELETE {{base}}/notes/{{createNote.response.body.id}}
+X-Demo-UserId: u1
+
+
+### ============================================================
+### СЦЕНАРІЙ Г — Security Misconfiguration (заголовки)
+### ============================================================
+
+### [G-1] Перевірка security headers у відповіді
+### Очікувані заголовки:
+###   X-Content-Type-Options: nosniff
+###   X-Frame-Options: DENY
+###   Referrer-Policy: no-referrer
+###   X-XSS-Protection: 0
+HEAD {{base}}/polls
+Accept: application/json
+
+###
+
+### [G-2] Перевірка: помилка не розкриває stack trace
+### Очікуваний результат: {"error":{"code":"NOT_FOUND","message":"Poll with id \"...\" not found"}}
+### Без будь-яких деталей реалізації або stack trace
+GET {{base}}/polls/nonexistent-id-that-does-not-exist
+Accept: application/json
+
+###
+
+### [G-3] Перевірка: 500 помилка не розкриває деталі
+### Очікуваний результат: {"error":{"code":"INTERNAL_SERVER_ERROR","message":"An unexpected error occurred"}}
+### (для тесту: передаємо некоректний JSON — буде 400, але формат помилки однаковий)
+POST {{base}}/polls
+Content-Type: application/json
+
+{ invalid json
+
+
+### ============================================================
+### СЦЕНАРІЙ Б — XSS
+### ============================================================
+
+### [X-1] Збережений XSS: POST опитування з XSS payload в title
+### Очікуваний результат: 201 — бекенд зберігає як є (санітизація на виході, не вході)
+### ПЕРЕВІРКА відбувається у браузері: відкрити фронтенд та перевірити що title
+### відображається як текст "<script>alert('XSS')</script>", а не виконується
+POST {{base}}/polls
+Content-Type: application/json
+
+{
+  "title": "<script>alert('XSS')</script>",
+  "endDate": "2027-12-31",
+  "visibility": "public",
+  "authorId": "u1",
+  "description": "<img src=x onerror=alert(document.cookie)>"
+}
+
+###
+
+### [X-2] Отримати щойно збережений poll (перевірити що дані збережені як є)
+### Захист відбувається при відображенні у фронтенді через esc()
+GET {{base}}/polls?sortBy=createdAt&sortDir=desc&pageSize=1
+Accept: application/json
