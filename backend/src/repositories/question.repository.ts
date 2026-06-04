@@ -1,5 +1,5 @@
 import { getDb } from '../db/database.js';
-import { BaseRepository, esc } from './base.repository.js';
+import { BaseRepository } from './base.repository.js';
 import type { Question } from '../types/models.js';
 
 export class QuestionRepository extends BaseRepository {
@@ -11,46 +11,47 @@ export class QuestionRepository extends BaseRepository {
 
   findById(id: string): Question | undefined {
     return getDb()
-      .prepare(`SELECT * FROM questions WHERE id = '${esc(id)}'`)
-      .get() as Question | undefined;
+      .prepare('SELECT * FROM questions WHERE id = ?')
+      .get(id) as Question | undefined;
   }
 
   findByPollId(pollId: string): Question[] {
     return getDb()
-      .prepare(`SELECT * FROM questions WHERE pollId = '${esc(pollId)}' ORDER BY "order" ASC`)
-      .all() as Question[];
+      .prepare('SELECT * FROM questions WHERE pollId = ? ORDER BY "order" ASC')
+      .all(pollId) as Question[];
   }
 
   maxOrderForPoll(pollId: string): number {
     const row = getDb()
-      .prepare(`SELECT MAX("order") as maxOrder FROM questions WHERE pollId = '${esc(pollId)}'`)
-      .get() as { maxOrder: number | null };
+      .prepare('SELECT MAX("order") as maxOrder FROM questions WHERE pollId = ?')
+      .get(pollId) as { maxOrder: number | null };
     return row.maxOrder ?? 0;
   }
 
   save(question: Question): Question {
-    getDb().exec(`
-      INSERT INTO questions (id, pollId, text, "order", createdAt)
-      VALUES (
-        '${esc(question.id)}', '${esc(question.pollId)}',
-        '${esc(question.text)}', ${question.order}, '${esc(question.createdAt)}'
-      )
-      ON CONFLICT(id) DO UPDATE SET
-        text    = '${esc(question.text)}',
-        "order" = ${question.order}
-    `);
+    getDb()
+      .prepare(`
+        INSERT INTO questions (id, pollId, text, "order", createdAt)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          text    = excluded.text,
+          "order" = excluded."order"
+      `)
+      .run(question.id, question.pollId, question.text, question.order, question.createdAt);
     return question;
   }
 
   delete(id: string): boolean {
     const result = getDb()
-      .prepare(`DELETE FROM questions WHERE id = '${esc(id)}'`)
-      .run();
+      .prepare('DELETE FROM questions WHERE id = ?')
+      .run(id);
     return result.changes > 0;
   }
 
   deleteByPollId(pollId: string): void {
-    getDb().exec(`DELETE FROM questions WHERE pollId = '${esc(pollId)}'`);
+    getDb()
+      .prepare('DELETE FROM questions WHERE pollId = ?')
+      .run(pollId);
   }
 }
 

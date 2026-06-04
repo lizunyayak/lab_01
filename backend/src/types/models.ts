@@ -36,6 +36,14 @@ export interface Response {
   createdAt: string;
 }
 
+export interface PersonalNote {
+  id: string;
+  ownerUserId: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
+
 // ─── Query param shapes ─────────────────────────────────────────────────────
 
 export interface ListQuery {

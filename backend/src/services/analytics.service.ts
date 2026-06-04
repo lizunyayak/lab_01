@@ -45,9 +45,9 @@ export class AnalyticsService {
         `SELECT p.*, u.name AS authorName
          FROM polls p
          JOIN users u ON u.id = p.authorId
-         WHERE p.id = '${pollId}'`
+         WHERE p.id = ?`
       )
-      .get() as (PollDetails & { authorName: string }) | undefined;
+      .get(pollId) as (PollDetails & { authorName: string }) | undefined;
 
     if (!poll) throw notFound('Poll', pollId);
 
@@ -57,11 +57,11 @@ export class AnalyticsService {
                 COUNT(r.id) AS responseCount
          FROM questions q
          LEFT JOIN responses r ON r.questionId = q.id
-         WHERE q.pollId = '${pollId}'
+         WHERE q.pollId = ?
          GROUP BY q.id
          ORDER BY q."order" ASC`
       )
-      .all() as QuestionWithStats[];
+      .all(pollId) as QuestionWithStats[];
 
     return {
       id:          poll.id,
@@ -93,19 +93,18 @@ export class AnalyticsService {
          FROM polls p
          LEFT JOIN questions q ON q.pollId = p.id
          LEFT JOIN responses r ON r.pollId = p.id
-         WHERE p.id = '${pollId}'
+         WHERE p.id = ?
          GROUP BY p.id`
       )
-      .get() as PollStats | undefined;
+      .get(pollId) as PollStats | undefined;
 
     if (!row) throw notFound('Poll', pollId);
     return row;
   }
 
   // ⚠ SQLi DEMO — raw string concat, NO escaping intentionally.
-  // Example of a dangerous input: ' OR '1'='1
-  // Full exploit: ?q=' OR '1'='1  →  WHERE title LIKE '%%' OR '1'='1'%'
-  // This returns ALL polls regardless of their actual title.
+  // Example exploit: ?q=' OR '1'='1  →  returns ALL polls
+  // UNION exploit:   ?q=' UNION SELECT id,email,name,email,createdAt FROM users--
   searchPollsUnsafe(q: string): PollSearchResult[] {
     const sql = `SELECT id, title, visibility, authorId, endDate
                  FROM polls
@@ -113,6 +112,19 @@ export class AnalyticsService {
                  ORDER BY createdAt DESC
                  LIMIT 20`;
     return getDb().prepare(sql).all() as PollSearchResult[];
+  }
+
+  // ✅ Safe version using parameterized query — for comparison with the unsafe endpoint
+  searchPollsSafe(q: string): PollSearchResult[] {
+    return getDb()
+      .prepare(
+        `SELECT id, title, visibility, authorId, endDate
+         FROM polls
+         WHERE title LIKE ?
+         ORDER BY createdAt DESC
+         LIMIT 20`
+      )
+      .all(`%${q}%`) as PollSearchResult[];
   }
 }
 

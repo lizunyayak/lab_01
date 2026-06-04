@@ -14,10 +14,20 @@ export const analyticsController = {
     } catch (err) { next(err); }
   },
 
+  // ⚠ SQLi-demo endpoint (intentionally vulnerable)
   searchPolls(req: Request, res: Response, next: NextFunction): void {
     try {
       const q = (req.query['q'] as string) ?? '';
       const results = analyticsService.searchPollsUnsafe(q);
+      res.json({ data: results, meta: { count: results.length, q } });
+    } catch (err) { next(err); }
+  },
+
+  // ✅ Safe search endpoint using parameterized query
+  searchPollsSafe(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const q = (req.query['q'] as string) ?? '';
+      const results = analyticsService.searchPollsSafe(q);
       res.json({ data: results, meta: { count: results.length, q } });
     } catch (err) { next(err); }
   }

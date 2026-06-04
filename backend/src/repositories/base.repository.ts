@@ -12,8 +12,9 @@ export interface PaginatedResult<T> {
   pageSize: number;
 }
 
-// Escapes single quotes to prevent accidental SQL breakage.
-// NOTE: This is NOT a security fix — parameterized queries are deferred to lab 4.
+// esc() was used for string-interpolation SQL in labs 1–4.
+// All repositories now use parameterized queries (Lab 05 fix).
+// Kept here for reference and the intentional SQLi-demo endpoint in analytics.service.ts.
 export function esc(val: string): string {
   return val.replace(/'/g, "''");
 }
