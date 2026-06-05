@@ -37,6 +37,23 @@ export interface PollSearchResult {
   endDate: string;
 }
 
+export interface TopPollQuestion {
+  id: string;
+  text: string;
+  order: number;
+}
+
+export interface TopPoll {
+  id: string;
+  title: string;
+  visibility: string;
+  authorId: string;
+  endDate: string;
+  createdAt: string;
+  responseCount: number;
+  questions: TopPollQuestion[];
+}
+
 export class AnalyticsService {
   // JOIN: poll + author + questions with response count per question
   getPollDetails(pollId: string): PollDetails {
@@ -112,6 +129,34 @@ export class AnalyticsService {
                  ORDER BY createdAt DESC
                  LIMIT 20`;
     return getDb().prepare(sql).all() as PollSearchResult[];
+  }
+
+  // Top N most popular polls by response count, with questions array
+  getTopPolls(limit: number): TopPoll[] {
+    const polls = getDb()
+      .prepare(
+        `SELECT p.id, p.title, p.visibility, p.authorId, p.endDate, p.createdAt,
+                COUNT(DISTINCT r.id) AS responseCount
+         FROM polls p
+         LEFT JOIN responses r ON r.pollId = p.id
+         GROUP BY p.id
+         ORDER BY responseCount DESC
+         LIMIT ?`
+      )
+      .all(limit) as Omit<TopPoll, 'questions'>[];
+
+    return polls.map(poll => {
+      const questions = getDb()
+        .prepare(
+          `SELECT id, text, "order"
+           FROM questions
+           WHERE pollId = ?
+           ORDER BY "order" ASC`
+        )
+        .all(poll.id) as TopPollQuestion[];
+
+      return { ...poll, questions };
+    });
   }
 
   // ✅ Safe version using parameterized query — for comparison with the unsafe endpoint
